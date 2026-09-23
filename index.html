@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#111111" />
+  <title>FlickFall V1</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="app">
+    <section id="startScreen" class="screen active">
+      <div class="panel hero">
+        <h1>FlickFall</h1>
+        <p>落ちてくる文字・単語を入力して撃破する、実戦型スマホ入力トレーナー。</p>
+      </div>
+
+      <div class="panel">
+        <label>言語</label>
+        <div class="segmented">
+          <button class="choice active" data-group="lang" data-value="ja">日本語</button>
+          <button class="choice" data-group="lang" data-value="en">English</button>
+        </div>
+
+        <label>レベル</label>
+        <div class="level-grid">
+          <button class="choice active" data-group="level" data-value="1">Lv.1</button>
+          <button class="choice" data-group="level" data-value="2">Lv.2</button>
+          <button class="choice" data-group="level" data-value="3">Lv.3</button>
+          <button class="choice" data-group="level" data-value="4">Lv.4</button>
+          <button class="choice" data-group="level" data-value="5">Lv.5</button>
+          <button class="choice" data-group="level" data-value="auto">AUTO</button>
+        </div>
+
+        <label>モード</label>
+        <div class="segmented three">
+          <button class="choice active" data-group="mode" data-value="survival">SURVIVAL</button>
+          <button class="choice" data-group="mode" data-value="weakness">WEAKNESS</button>
+          <button class="choice" data-group="mode" data-value="daily">DAILY</button>
+        </div>
+
+        <button id="startBtn" class="primary">START</button>
+      </div>
+
+      <div class="panel stats-mini">
+        <div><span>BEST</span><strong id="bestScore">0</strong></div>
+        <div><span>ACCURACY</span><strong id="bestAcc">--</strong></div>
+        <div><span>WEAK</span><strong id="weakSummary">--</strong></div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <header class="hud">
+        <div><span>SCORE</span><strong id="score">0</strong></div>
+        <div><span>COMBO</span><strong id="combo">0</strong></div>
+        <div><span>HP</span><strong id="hp">5</strong></div>
+        <div><span>SPD</span><strong id="speedLabel">1.0x</strong></div>
+      </header>
+
+      <div id="arena" class="arena">
+        <div id="attackFx" class="attack-fx"></div>
+      </div>
+
+      <div class="input-panel">
+        <div id="targetProgress" class="target-progress">---</div>
+
+        <div id="jpPad" class="jp-pad">
+          <button data-base="あ">あ</button><button data-base="か">か</button><button data-base="さ">さ</button>
+          <button data-base="た">た</button><button data-base="な">な</button><button data-base="は">は</button>
+          <button data-base="ま">ま</button><button data-base="や">や</button><button data-base="ら">ら</button>
+          <button data-base="わ">わ</button><button id="dakutenBtn">゛</button><button id="smallBtn">小</button>
+        </div>
+
+        <div id="enPad" class="en-pad hidden"></div>
+
+        <input id="hiddenInput" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="text" />
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen">
+      <div class="panel result">
+        <h2>RESULT</h2>
+        <div class="result-grid">
+          <div><span>SCORE</span><strong id="rScore">0</strong></div>
+          <div><span>ACCURACY</span><strong id="rAccuracy">0%</strong></div>
+          <div><span>AVG INPUT</span><strong id="rAvg">0 ms</strong></div>
+          <div><span>MAX COMBO</span><strong id="rCombo">0</strong></div>
+        </div>
+        <div class="weak-box">
+          <h3>今日の苦手</h3>
+          <p id="rWeak">まだ十分なデータがありません。</p>
+        </div>
+        <button id="retryBtn" class="primary">RETRY</button>
+        <button id="homeBtn" class="secondary">HOME</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
