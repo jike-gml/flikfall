@@ -8,6 +8,8 @@
 - SURVIVAL / WEAKNESS / DAILY
 - 文字・単語・短文の落下
 - 日本語専用フリックパッド
+- 入力済み文字の色分けとクリアゲージ
+- 誤入力時の画面フラッシュ・揺れ・対応端末での振動
 - 英語キーパッド
 - HP / SCORE / COMBO / 落下速度
 - 入力速度 / 正確率計測
@@ -25,3 +27,4 @@
 ## 起動
 ローカルで直接 index.html を開くこともできますが、PWA機能は HTTP(S) 配信が必要です。
 GitHub Pages / Netlify / Cloudflare Pages などの静的ホスティングにそのまま配置できます。
+

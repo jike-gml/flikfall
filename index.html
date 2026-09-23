@@ -66,10 +66,15 @@
 
       <div id="arena" class="arena">
         <div id="attackFx" class="attack-fx"></div>
+        <div id="mistakeFx" class="mistake-fx" aria-hidden="true">MISS!</div>
       </div>
 
       <div class="input-panel">
-        <div id="targetProgress" class="target-progress">---</div>
+        <div id="targetProgress" class="target-progress" aria-live="polite">---</div>
+        <div id="clearMeter" class="clear-meter" role="progressbar" aria-label="クリアゲージ" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="clear-meter-head"><span>CLEAR GAUGE</span><strong id="clearStatus">0%</strong></div>
+          <div class="clear-meter-track"><span id="clearGaugeFill"></span></div>
+        </div>
 
         <div id="jpPad" class="jp-pad">
           <button data-base="あ">あ</button><button data-base="か">か</button><button data-base="さ">さ</button>
@@ -110,3 +115,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+

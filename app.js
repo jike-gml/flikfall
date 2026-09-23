@@ -3,7 +3,7 @@ const state = {
   lang:'ja', level:'1', mode:'survival',
   score:0, combo:0, maxCombo:0, hp:5,
   startAt:0, lastCharAt:0, totalInputs:0, correctInputs:0,
-  current:null, raf:null, spawnTimer:null, speed:1,
+  current:null, raf:null, spawnTimer:null, feedbackTimer:null, speed:1,
   chars:{}, directions:{up:mkStat(),down:mkStat(),left:mkStat(),right:mkStat(),tap:mkStat()},
   sessionStart:0, ended:true
 };
@@ -87,11 +87,15 @@ function stopSession(){
   state.ended=true;
   cancelAnimationFrame(state.raf);
   clearTimeout(state.spawnTimer);
-  state.raf=null; state.spawnTimer=null;
+  clearTimeout(state.feedbackTimer);
+  state.raf=null; state.spawnTimer=null; state.feedbackTimer=null;
   clearFlick();
   state.current?.el.remove(); state.current=null;
   $("#attackFx").classList.remove("fire");
+  $("#gameScreen").classList.remove("mistake");
+  $("#mistakeFx").classList.remove("show");
   $("#targetProgress").textContent="---";
+  updateClearGauge(0);
 }
 
 function scheduleEnemy(delay){
@@ -148,7 +152,6 @@ function spawnEnemy(){
   const text=pool[Math.floor(Math.random()*pool.length)];
   const el=document.createElement("div");
   el.className="enemy";
-  el.textContent=text;
   $("#arena").appendChild(el);
   state.current={text, typed:"", el, y:-50, born:performance.now(), charStarted:performance.now()};
   updateProgress();
@@ -196,6 +199,35 @@ function flashAttack(){
   const fx=$("#attackFx"); fx.classList.remove("fire"); void fx.offsetWidth; fx.classList.add("fire");
 }
 
+function showMistake(){
+  const screen=$("#gameScreen"), fx=$("#mistakeFx");
+  clearTimeout(state.feedbackTimer);
+  screen.classList.remove("mistake"); fx.classList.remove("show");
+  void screen.offsetWidth;
+  screen.classList.add("mistake"); fx.classList.add("show");
+  state.feedbackTimer=setTimeout(()=>{
+    screen.classList.remove("mistake");fx.classList.remove("show");state.feedbackTimer=null;
+  },320);
+  navigator.vibrate?.([45,35,45]);
+}
+
+function renderCharacters(container,text,completed){
+  container.replaceChildren(...[...text].map((ch,index)=>{
+    const span=document.createElement("span");
+    span.className=index<completed?"char typed":index===completed?"char next":"char";
+    span.textContent=ch===" "?"\u00a0":ch;
+    return span;
+  }));
+}
+
+function updateClearGauge(percent){
+  const value=Math.max(0,Math.min(100,Math.round(percent)));
+  $("#clearGaugeFill").style.width=value+"%";
+  $("#clearStatus").textContent=value===100?"CLEAR!":value+"%";
+  $("#clearMeter").setAttribute("aria-valuenow",value);
+  $("#clearMeter").classList.toggle("complete",value===100);
+}
+
 function inputChar(ch,dir="tap"){
   const c=state.current; if(state.ended || !c) return;
   const now=performance.now(), expected=[...c.text][[...c.typed].length];
@@ -217,18 +249,23 @@ function inputChar(ch,dir="tap"){
     if(c.typed===c.text){
       state.score += Math.round(100*state.speed);
       $("#score").textContent=state.score;
-      c.el.remove(); state.current=null;
-      scheduleEnemy(110);
+      c.el.classList.add("cleared"); state.current=null;
+      setTimeout(()=>c.el.remove(),280);
+      scheduleEnemy(320);
     }
   } else {
     state.combo=0; $("#combo").textContent=0;
+    showMistake();
   }
 }
 
 function updateProgress(){
   const c=state.current;
-  if(!c){$("#targetProgress").textContent="---"; return;}
-  $("#targetProgress").textContent=`${c.typed}${c.text.slice(c.typed.length)}`;
+  if(!c){$("#targetProgress").textContent="---";updateClearGauge(0);return;}
+  const completed=[...c.typed].length, total=[...c.text].length;
+  renderCharacters(c.el,c.text,completed);
+  renderCharacters($("#targetProgress"),c.text,completed);
+  updateClearGauge(total?completed/total*100:0);
 }
 
 function endGame(){
@@ -360,3 +397,4 @@ loadProfile();
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("./sw.js").catch(()=>{});
 }
+
