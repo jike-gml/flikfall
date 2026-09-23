@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-  <meta name="theme-color" content="#111111" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#087fbc" />
   <title>FlickFall V1</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
@@ -58,6 +58,12 @@
         <div><span>SPD</span><strong id="speedLabel">1.0x</strong></div>
       </header>
 
+      <nav class="game-actions" aria-label="ゲーム操作">
+        <span class="elapsed">TIME <strong id="elapsed">0:00</strong></span>
+        <button id="restartBtn" type="button">↻ RESTART</button>
+        <button id="retireBtn" type="button">⌂ RETIRE</button>
+      </nav>
+
       <div id="arena" class="arena">
         <div id="attackFx" class="attack-fx"></div>
       </div>
@@ -97,6 +103,10 @@
     </section>
   </main>
 
+  <div id="flickCandidates" class="flick-candidates hidden" aria-hidden="true">
+    <span data-direction="up"></span><span data-direction="left"></span>
+    <span data-direction="tap"></span><span data-direction="right"></span><span data-direction="down"></span>
+  </div>
   <script src="app.js"></script>
 </body>
 </html>

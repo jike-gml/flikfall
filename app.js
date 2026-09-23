@@ -5,7 +5,7 @@ const state = {
   startAt:0, lastCharAt:0, totalInputs:0, correctInputs:0,
   current:null, raf:null, spawnTimer:null, speed:1,
   chars:{}, directions:{up:mkStat(),down:mkStat(),left:mkStat(),right:mkStat(),tap:mkStat()},
-  sessionStart:0, ended:false
+  sessionStart:0, ended:true
 };
 
 function mkStat(){ return {n:0, ok:0, totalMs:0}; }
@@ -59,6 +59,13 @@ $$(".choice").forEach(b=>b.addEventListener("click",()=>{
 
 $("#startBtn").addEventListener("click", startGame);
 $("#retryBtn").addEventListener("click", startGame);
+$("#restartBtn").addEventListener("click", startGame);
+$("#retireBtn").addEventListener("click", ()=>{
+  clearFlick();
+  if(!window.confirm("メイン画面に戻りますか？\n途中のスコア・苦手分析は保存されません。")) return;
+  stopSession();
+  show("startScreen");
+});
 $("#homeBtn").addEventListener("click", ()=>show("startScreen"));
 
 function show(id){
@@ -76,18 +83,37 @@ function setupEnglish(){
   });
 }
 
+function stopSession(){
+  state.ended=true;
+  cancelAnimationFrame(state.raf);
+  clearTimeout(state.spawnTimer);
+  state.raf=null; state.spawnTimer=null;
+  clearFlick();
+  state.current?.el.remove(); state.current=null;
+  $("#attackFx").classList.remove("fire");
+  $("#targetProgress").textContent="---";
+}
+
+function scheduleEnemy(delay){
+  clearTimeout(state.spawnTimer);
+  state.spawnTimer=setTimeout(()=>{state.spawnTimer=null; spawnEnemy();},delay);
+}
+
 function startGame(){
+  stopSession();
   state.score=0; state.combo=0; state.maxCombo=0; state.hp=5;
   state.totalInputs=0; state.correctInputs=0; state.current=null; state.speed=1; state.ended=false;
   state.chars={}; state.directions={up:mkStat(),down:mkStat(),left:mkStat(),right:mkStat(),tap:mkStat()};
   state.sessionStart=performance.now();
+  state.startAt=state.sessionStart; state.lastCharAt=0;
+  $("#elapsed").textContent="0:00";
   $("#score").textContent=0; $("#combo").textContent=0; $("#hp").textContent=5; $("#speedLabel").textContent="1.0x";
   $("#arena").querySelectorAll(".enemy").forEach(e=>e.remove());
   $("#jpPad").classList.toggle("hidden", state.lang!=="ja");
   $("#enPad").classList.toggle("hidden", state.lang!=="en");
   show("gameScreen");
   spawnEnemy();
-  gameLoop();
+  state.raf=requestAnimationFrame(gameLoop);
 }
 
 function getPool(){
@@ -125,6 +151,7 @@ function spawnEnemy(){
   el.textContent=text;
   $("#arena").appendChild(el);
   state.current={text, typed:"", el, y:-50, born:performance.now(), charStarted:performance.now()};
+  updateProgress();
 }
 
 function gameLoop(){
@@ -141,12 +168,14 @@ function gameLoop(){
       c.el.classList.add("danger");
     }
   }
+  if(state.ended) return;
   adaptDifficulty();
-  state.raf=requestAnimationFrame(gameLoop);
+  if(!state.ended) state.raf=requestAnimationFrame(gameLoop);
 }
 
 function adaptDifficulty(){
   const t=(performance.now()-state.sessionStart)/1000;
+  $("#elapsed").textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,"0")}`;
   const target=1+Math.min(1.8,t/45);
   if(state.level==="auto") state.speed += (target-state.speed)*0.002;
   else state.speed = 1 + (Number(state.level)-1)*0.17 + Math.min(.8,t/80);
@@ -160,7 +189,7 @@ function missEnemy(){
   state.hp--; state.combo=0;
   $("#hp").textContent=state.hp; $("#combo").textContent=0;
   if(state.hp<=0) return endGame();
-  setTimeout(spawnEnemy,180);
+  scheduleEnemy(180);
 }
 
 function flashAttack(){
@@ -168,7 +197,7 @@ function flashAttack(){
 }
 
 function inputChar(ch,dir="tap"){
-  const c=state.current; if(!c) return;
+  const c=state.current; if(state.ended || !c) return;
   const now=performance.now(), expected=[...c.text][[...c.typed].length];
   const ms=now-c.charStarted; c.charStarted=now;
   state.totalInputs++;
@@ -187,8 +216,9 @@ function inputChar(ch,dir="tap"){
     updateProgress();
     if(c.typed===c.text){
       state.score += Math.round(100*state.speed);
+      $("#score").textContent=state.score;
       c.el.remove(); state.current=null;
-      setTimeout(spawnEnemy,110);
+      scheduleEnemy(110);
     }
   } else {
     state.combo=0; $("#combo").textContent=0;
@@ -203,9 +233,7 @@ function updateProgress(){
 
 function endGame(){
   if(state.ended) return;
-  state.ended=true;
-  cancelAnimationFrame(state.raf);
-  if(state.current?.el) state.current.el.remove();
+  stopSession();
   const acc=state.totalInputs ? Math.round(state.correctInputs/state.totalInputs*1000)/10 : 0;
   let totalMs=0,n=0;
   Object.values(state.chars).forEach(s=>{totalMs+=s.totalMs;n+=s.n});
@@ -257,25 +285,55 @@ function getWeakCharsFromProfile(){
 }
 
 let swipeStart=null;
+function flickDirection(e){
+  const dx=e.clientX-swipeStart.x, dy=e.clientY-swipeStart.y;
+  if(Math.hypot(dx,dy)<=18) return "tap";
+  return Math.abs(dx)>Math.abs(dy) ? (dx>0?"right":"left") : (dy>0?"down":"up");
+}
+function clearFlick(){
+  const previous=swipeStart; swipeStart=null;
+  $("#flickCandidates").classList.add("hidden");
+  if(previous){
+    previous.btn.classList.remove("pressed");
+    if(previous.btn.hasPointerCapture?.(previous.pointerId)) previous.btn.releasePointerCapture(previous.pointerId);
+  }
+}
+function highlightFlick(dir){
+  $$("#flickCandidates [data-direction]").forEach(el=>el.classList.toggle("selected",el.dataset.direction===dir && !!el.textContent));
+}
 $$("#jpPad button[data-base]").forEach(btn=>{
   btn.addEventListener("pointerdown",e=>{
+    if(state.ended || swipeStart || e.button!==0) return;
+    e.preventDefault();
+    swipeStart={x:e.clientX,y:e.clientY,base:btn.dataset.base,btn,pointerId:e.pointerId};
     btn.setPointerCapture?.(e.pointerId);
-    swipeStart={x:e.clientX,y:e.clientY,base:btn.dataset.base};
+    btn.classList.add("pressed");
+    const popup=$("#flickCandidates"), rect=btn.getBoundingClientRect();
+    $$("#flickCandidates [data-direction]").forEach(el=>{
+      el.textContent=FLICK[btn.dataset.base][el.dataset.direction];
+      el.classList.toggle("empty",!el.textContent);
+    });
+    popup.style.left=Math.max(80,Math.min(window.innerWidth-80,rect.left+rect.width/2))+"px";
+    popup.style.top=Math.max(80,Math.min(window.innerHeight-80,rect.top-82))+"px";
+    popup.classList.remove("hidden");
+    highlightFlick("tap");
+  });
+  btn.addEventListener("pointermove",e=>{
+    if(swipeStart?.pointerId===e.pointerId) highlightFlick(flickDirection(e));
   });
   btn.addEventListener("pointerup",e=>{
-    if(!swipeStart) return;
-    const dx=e.clientX-swipeStart.x, dy=e.clientY-swipeStart.y;
-    const dist=Math.hypot(dx,dy);
-    let dir="tap";
-    if(dist>18){
-      if(Math.abs(dx)>Math.abs(dy)) dir=dx>0?"right":"left";
-      else dir=dy>0?"down":"up";
-    }
-    const ch=FLICK[swipeStart.base]?.[dir];
+    if(swipeStart?.pointerId!==e.pointerId) return;
+    const dir=flickDirection(e), ch=FLICK[swipeStart.base]?.[dir];
+    clearFlick();
     if(ch) inputChar(ch,dir);
-    swipeStart=null;
   });
+  ["pointercancel","lostpointercapture"].forEach(type=>btn.addEventListener(type,e=>{
+    if(swipeStart?.pointerId===e.pointerId) clearFlick();
+  }));
 });
+window.addEventListener("blur",clearFlick);
+window.addEventListener("resize",clearFlick);
+document.addEventListener("visibilitychange",()=>{if(document.hidden) clearFlick();});
 
 let lastKana="";
 $("#dakutenBtn").addEventListener("click",()=>{
